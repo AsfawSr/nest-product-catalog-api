@@ -6,6 +6,10 @@ let currentPage = 1;
 const pageSize = 6;
 let paginationMeta = null;
 
+// Auth State
+let authToken = localStorage.getItem('nest_auth_token') || null;
+let currentUser = JSON.parse(localStorage.getItem('nest_auth_user') || 'null');
+
 // DOM Elements
 const productsGrid = document.getElementById('products-grid');
 const searchInput = document.getElementById('search-input');
@@ -25,7 +29,7 @@ const statTotalStock = document.getElementById('stat-total-stock');
 const statCatalogValue = document.getElementById('stat-catalog-value');
 const statCategoriesCount = document.getElementById('stat-categories-count');
 
-// Modal Elements
+// Product Modal Elements
 const productModal = document.getElementById('product-modal');
 const modalTitle = document.getElementById('modal-title');
 const productForm = document.getElementById('product-form');
@@ -33,7 +37,7 @@ const btnOpenCreateModal = document.getElementById('btn-open-create-modal');
 const btnCloseModal = document.getElementById('btn-close-modal');
 const btnCancelModal = document.getElementById('btn-cancel-modal');
 
-// Form Fields
+// Product Form Fields
 const formId = document.getElementById('form-product-id');
 const formName = document.getElementById('form-name');
 const formDescription = document.getElementById('form-description');
@@ -41,13 +45,31 @@ const formPrice = document.getElementById('form-price');
 const formStock = document.getElementById('form-stock');
 const formCategory = document.getElementById('form-category');
 
+// Auth DOM Elements
+const authPillWrapper = document.getElementById('auth-pill-wrapper');
+const authModal = document.getElementById('auth-modal');
+const btnCloseAuthModal = document.getElementById('btn-close-auth-modal');
+const tabLogin = document.getElementById('tab-login');
+const tabRegister = document.getElementById('tab-register');
+const authLoginForm = document.getElementById('auth-login-form');
+const authRegisterForm = document.getElementById('auth-register-form');
+const loginEmailInput = document.getElementById('login-email');
+const loginPasswordInput = document.getElementById('login-password');
+const regEmailInput = document.getElementById('reg-email');
+const regPasswordInput = document.getElementById('reg-password');
+const regRoleSelect = document.getElementById('reg-role');
+const btnQuickAdmin = document.getElementById('btn-quick-admin');
+const btnQuickCustomer = document.getElementById('btn-quick-customer');
+
 // Toast Container
 const toastContainer = document.getElementById('toast-container');
 
 // Initial Load
 document.addEventListener('DOMContentLoaded', () => {
+  renderAuthPill();
   loadProducts();
   setupEventListeners();
+  setupAuthEventListeners();
 });
 
 function setupEventListeners() {
@@ -91,7 +113,7 @@ function setupEventListeners() {
     }
   });
 
-  // Modal Controls
+  // Product Modal Controls
   btnOpenCreateModal.addEventListener('click', openCreateModal);
   btnCloseModal.addEventListener('click', closeModal);
   btnCancelModal.addEventListener('click', closeModal);
@@ -99,8 +121,154 @@ function setupEventListeners() {
     if (e.target === productModal) closeModal();
   });
 
-  // Form Submission
+  // Product Form Submission
   productForm.addEventListener('submit', handleFormSubmit);
+}
+
+// Auth Event Listeners
+function setupAuthEventListeners() {
+  btnCloseAuthModal.addEventListener('click', closeAuthModal);
+  authModal.addEventListener('click', (e) => {
+    if (e.target === authModal) closeAuthModal();
+  });
+
+  // Tabs
+  tabLogin.addEventListener('click', () => switchAuthTab('login'));
+  tabRegister.addEventListener('click', () => switchAuthTab('register'));
+
+  // Quick Demo Fillers
+  btnQuickAdmin.addEventListener('click', () => {
+    switchAuthTab('login');
+    loginEmailInput.value = 'admin@store.com';
+    loginPasswordInput.value = 'Admin123!';
+  });
+
+  btnQuickCustomer.addEventListener('click', () => {
+    switchAuthTab('login');
+    loginEmailInput.value = 'customer@store.com';
+    loginPasswordInput.value = 'Customer123!';
+  });
+
+  // Login Submit
+  authLoginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: loginEmailInput.value.trim(),
+          password: loginPasswordInput.value,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      setAuthSession(data.accessToken, data.user);
+      showToast(`Welcome back, ${data.user.email}! (${data.user.role})`, 'success');
+      closeAuthModal();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
+
+  // Register Submit
+  authRegisterForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: regEmailInput.value.trim(),
+          password: regPasswordInput.value,
+          role: regRoleSelect.value,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Registration failed');
+      }
+
+      setAuthSession(data.accessToken, data.user);
+      showToast(`Account created! Logged in as ${data.user.email}`, 'success');
+      closeAuthModal();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
+}
+
+function switchAuthTab(tab) {
+  if (tab === 'login') {
+    tabLogin.classList.add('active');
+    tabRegister.classList.remove('active');
+    authLoginForm.classList.remove('hidden');
+    authRegisterForm.classList.add('hidden');
+  } else {
+    tabRegister.classList.add('active');
+    tabLogin.classList.remove('active');
+    authRegisterForm.classList.remove('hidden');
+    authLoginForm.classList.add('hidden');
+  }
+}
+
+function openAuthModal() {
+  authModal.classList.add('active');
+}
+
+function closeAuthModal() {
+  authModal.classList.remove('active');
+}
+
+function setAuthSession(token, user) {
+  authToken = token;
+  currentUser = user;
+  localStorage.setItem('nest_auth_token', token);
+  localStorage.setItem('nest_auth_user', JSON.stringify(user));
+  renderAuthPill();
+}
+
+function clearAuthSession() {
+  authToken = null;
+  currentUser = null;
+  localStorage.removeItem('nest_auth_token');
+  localStorage.removeItem('nest_auth_user');
+  renderAuthPill();
+  showToast('Signed out successfully', 'info');
+}
+
+function renderAuthPill() {
+  if (currentUser) {
+    const roleLower = currentUser.role.toLowerCase();
+    authPillWrapper.innerHTML = `
+      <div class="auth-user-pill">
+        <span class="auth-user-email">👤 ${escapeHtml(currentUser.email)}</span>
+        <span class="auth-role-tag ${roleLower}">${currentUser.role}</span>
+        <button class="btn-logout" id="btn-logout" title="Sign out">&times;</button>
+      </div>
+    `;
+    document.getElementById('btn-logout').addEventListener('click', clearAuthSession);
+  } else {
+    authPillWrapper.innerHTML = `
+      <button class="btn-auth" id="btn-open-auth-modal">
+        <span>🔑 Sign In</span>
+      </button>
+    `;
+    document.getElementById('btn-open-auth-modal').addEventListener('click', openAuthModal);
+  }
+}
+
+function getAuthHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  return headers;
 }
 
 // Fetch products from API with pagination
@@ -108,7 +276,7 @@ async function loadProducts() {
   try {
     const params = new URLSearchParams();
     params.append('page', currentPage);
-    params.append('limit', pageSize);
+    params.append('take', pageSize);
     if (selectedCategory) params.append('category', selectedCategory);
     if (searchInput.value.trim()) params.append('search', searchInput.value.trim());
     if (minPriceInput.value) params.append('minPrice', minPriceInput.value);
@@ -256,6 +424,11 @@ window.selectCategory = function (cat) {
 
 // Modal Operations
 function openCreateModal() {
+  if (!currentUser || currentUser.role !== 'ADMIN') {
+    showToast('Admin role required to add products. Please sign in as Admin.', 'error');
+    openAuthModal();
+    return;
+  }
   modalTitle.textContent = 'Add New Product';
   formId.value = '';
   productForm.reset();
@@ -263,6 +436,11 @@ function openCreateModal() {
 }
 
 window.openEditModal = function (id) {
+  if (!currentUser || currentUser.role !== 'ADMIN') {
+    showToast('Admin role required to edit products. Please sign in as Admin.', 'error');
+    openAuthModal();
+    return;
+  }
   const p = products.find((prod) => prod.id === id);
   if (!p) return;
 
@@ -300,19 +478,29 @@ async function handleFormSubmit(e) {
       // Update
       res = await fetch(`/products/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
     } else {
       // Create
       res = await fetch('/products', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
     }
 
     const data = await res.json();
+
+    if (res.status === 401) {
+      showToast('Authentication required. Please sign in as an Admin.', 'error');
+      openAuthModal();
+      return;
+    }
+    if (res.status === 403) {
+      showToast('Forbidden: Admin role required for this action.', 'error');
+      return;
+    }
 
     if (!res.ok) {
       const msg = Array.isArray(data.message) ? data.message.join(' | ') : data.message;
@@ -332,6 +520,12 @@ async function handleFormSubmit(e) {
 
 // Quick Stock Adjustment (+1 or -1)
 window.adjustStock = async function (id, delta) {
+  if (!currentUser || currentUser.role !== 'ADMIN') {
+    showToast('Admin role required to adjust stock. Please sign in as Admin.', 'error');
+    openAuthModal();
+    return;
+  }
+
   const p = products.find((prod) => prod.id === id);
   if (!p) return;
 
@@ -344,9 +538,14 @@ window.adjustStock = async function (id, delta) {
   try {
     const res = await fetch(`/products/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ stock: newStock }),
     });
+
+    if (res.status === 401 || res.status === 403) {
+      showToast('Forbidden: Admin permissions required.', 'error');
+      return;
+    }
 
     const data = await res.json();
     if (!res.ok) {
@@ -362,6 +561,12 @@ window.adjustStock = async function (id, delta) {
 
 // Delete Product
 window.deleteProduct = async function (id, name) {
+  if (!currentUser || currentUser.role !== 'ADMIN') {
+    showToast('Admin role required to delete products. Please sign in as Admin.', 'error');
+    openAuthModal();
+    return;
+  }
+
   if (!confirm(`Are you sure you want to delete "${name}" (ID #${id})?`)) {
     return;
   }
@@ -369,7 +574,13 @@ window.deleteProduct = async function (id, name) {
   try {
     const res = await fetch(`/products/${id}`, {
       method: 'DELETE',
+      headers: getAuthHeaders(),
     });
+
+    if (res.status === 401 || res.status === 403) {
+      showToast('Forbidden: Admin permissions required to delete products.', 'error');
+      return;
+    }
 
     if (!res.ok) {
       const data = await res.json();

@@ -10,12 +10,14 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
@@ -27,6 +29,10 @@ import { GetProductsUseCase } from './application/use-cases/get-products.use-cas
 import { GetProductByIdUseCase } from './application/use-cases/get-product-by-id.use-case.js';
 import { UpdateProductUseCase } from './application/use-cases/update-product.use-case.js';
 import { DeleteProductUseCase } from './application/use-cases/delete-product.use-case.js';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
+import { UserRole } from '../auth/enums/user-role.enum.js';
 
 @ApiTags('products')
 @Controller('products')
@@ -40,8 +46,11 @@ export class ProductsController {
   ) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create a new product' })
+  @ApiOperation({ summary: 'Create a new product (Admin only)' })
   @ApiResponse({
     status: 201,
     description: 'The product has been successfully created.',
@@ -51,12 +60,20 @@ export class ProductsController {
     status: 400,
     description: 'Validation failed or domain business invariant violated.',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized: missing or invalid JWT Bearer token.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden: requires ADMIN role.',
+  })
   create(@Body() createProductDto: CreateProductDto) {
     return this.createProductUseCase.execute(createProductDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Retrieve, filter, and paginate products' })
+  @ApiOperation({ summary: 'Retrieve, filter, and paginate products (Public)' })
   @ApiResponse({
     status: 200,
     description: 'Paginated list of products matching criteria.',
@@ -67,7 +84,7 @@ export class ProductsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a product by ID' })
+  @ApiOperation({ summary: 'Get a product by ID (Public)' })
   @ApiParam({ name: 'id', description: 'Numeric product ID', example: 1 })
   @ApiResponse({
     status: 200,
@@ -83,7 +100,10 @@ export class ProductsController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update an existing product' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update an existing product (Admin only)' })
   @ApiParam({ name: 'id', description: 'Numeric product ID', example: 1 })
   @ApiResponse({
     status: 200,
@@ -98,6 +118,14 @@ export class ProductsController {
     status: 400,
     description: 'Validation or domain rule error.',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized: missing or invalid JWT Bearer token.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden: requires ADMIN role.',
+  })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateProductDto: UpdateProductDto,
@@ -106,7 +134,10 @@ export class ProductsController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a product by ID' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a product by ID (Admin only)' })
   @ApiParam({ name: 'id', description: 'Numeric product ID', example: 1 })
   @ApiResponse({
     status: 200,
@@ -115,6 +146,14 @@ export class ProductsController {
   @ApiResponse({
     status: 404,
     description: 'Product not found.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized: missing or invalid JWT Bearer token.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden: requires ADMIN role.',
   })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.deleteProductUseCase.execute(id);

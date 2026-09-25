@@ -5,6 +5,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { ProductsModule } from './products/products.module.js';
+import { AuthModule } from './auth/auth.module.js';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ProductsModule } from './products/products.module.js';
         migrationsRun: configService.get<string>('DB_MIGRATIONS_RUN') === 'true',
       }),
     }),
+    AuthModule,
     ProductsModule,
   ],
   controllers: [AppController],

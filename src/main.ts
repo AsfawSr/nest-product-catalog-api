@@ -31,7 +31,8 @@ async function bootstrap() {
     .setDescription(
       'Clean Architecture & Domain-Driven Design (DDD) REST API built with NestJS, TypeORM, and PostgreSQL.',
     )
-    .setVersion('1.0')
+    .addBearerAuth()
+    .addTag('Auth', 'User authentication, registration, and JWT token management')
     .addTag('products', 'Product catalog CRUD operations and queries')
     .build();
 
