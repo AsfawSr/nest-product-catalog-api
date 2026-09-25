@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NestStore | Product Catalog Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Navbar -->
+    <header class="navbar">
+      <a href="/" class="brand">
+        <div class="brand-icon">📦</div>
+        <div>
+          <h1 class="brand-title">NestStore</h1>
+          <span class="brand-subtitle">DDD & PostgreSQL API</span>
+        </div>
+      </a>
+      <div class="nav-actions">
+        <a href="/api" target="_blank" class="btn-swagger" id="btn-swagger-docs">
+          <span>⚡ Swagger Docs</span>
+        </a>
+        <button class="btn-primary" id="btn-open-create-modal">
+          <span>+ Add Product</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Stats Ribbon -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-label">Total Products</div>
+          <div class="stat-value" id="stat-total-products">0</div>
+        </div>
+        <div class="stat-badge-icon">🏷️</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-label">Inventory Units</div>
+          <div class="stat-value" id="stat-total-stock">0</div>
+        </div>
+        <div class="stat-badge-icon">📊</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-label">Catalog Value</div>
+          <div class="stat-value" id="stat-catalog-value">$0.00</div>
+        </div>
+        <div class="stat-badge-icon">💎</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-label">Categories</div>
+          <div class="stat-value" id="stat-categories-count">0</div>
+        </div>
+        <div class="stat-badge-icon">🗂️</div>
+      </div>
+    </section>
+
+    <!-- Filter & Search Bar -->
+    <section class="controls-bar">
+      <div class="search-row">
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input 
+            type="text" 
+            id="search-input" 
+            class="search-input" 
+            placeholder="Search products by name or description..." 
+          />
+        </div>
+        <div class="price-filters">
+          <input 
+            type="number" 
+            id="min-price-input" 
+            class="price-input" 
+            placeholder="Min $" 
+            min="0"
+          />
+          <input 
+            type="number" 
+            id="max-price-input" 
+            class="price-input" 
+            placeholder="Max $" 
+            min="0"
+          />
+        </div>
+      </div>
+
+      <!-- Category Filter Chips -->
+      <div class="category-chips" id="category-chips-container">
+        <button class="chip active" data-category="">All Categories</button>
+      </div>
+    </section>
+
+    <!-- Product Grid -->
+    <main>
+      <div class="products-grid" id="products-grid">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </main>
+  </div>
+
+  <!-- Create / Edit Product Modal -->
+  <div class="modal-overlay" id="product-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-title">Add New Product</h2>
+        <button class="btn-close" id="btn-close-modal">&times;</button>
+      </div>
+      <form id="product-form">
+        <input type="hidden" id="form-product-id" />
+        
+        <div class="form-group">
+          <label class="form-label" for="form-name">Product Name *</label>
+          <input 
+            type="text" 
+            id="form-name" 
+            class="form-control" 
+            placeholder="e.g. Mechanical Gaming Keyboard" 
+            required 
+            minlength="3"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="form-description">Description</label>
+          <textarea 
+            id="form-description" 
+            class="form-control" 
+            rows="3" 
+            placeholder="Features, specs, and details..."
+          ></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="form-price">Price ($) *</label>
+            <input 
+              type="number" 
+              id="form-price" 
+              class="form-control" 
+              step="0.01" 
+              min="0.01" 
+              placeholder="99.99" 
+              required 
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="form-stock">Stock Units *</label>
+            <input 
+              type="number" 
+              id="form-stock" 
+              class="form-control" 
+              min="0" 
+              placeholder="10" 
+              required 
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="form-category">Category *</label>
+          <input 
+            type="text" 
+            id="form-category" 
+            class="form-control" 
+            placeholder="e.g. Electronics, Audio, Kitchen" 
+            required 
+          />
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="btn-cancel-modal">Cancel</button>
+          <button type="submit" class="btn-primary" id="btn-save-product">Save to Database</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
