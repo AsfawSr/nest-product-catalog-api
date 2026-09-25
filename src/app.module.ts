@@ -28,6 +28,10 @@ import { AuthModule } from './auth/auth.module.js';
         database: configService.get<string>('DB_NAME', 'nest_products'),
         autoLoadEntities: true,
         synchronize: false,
+        migrations: [
+          'dist/database/migrations/*.js',
+          'src/database/migrations/*{.ts,.js}',
+        ],
         migrationsRun: configService.get<string>('DB_MIGRATIONS_RUN') === 'true',
       }),
     }),
