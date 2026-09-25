@@ -1,26 +1,32 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProductsController } from './products.controller.js';
-import { ProductsService } from './products.service.js';
+import { CreateProductUseCase } from './application/use-cases/create-product.use-case.js';
+import { GetProductsUseCase } from './application/use-cases/get-products.use-case.js';
+import { GetProductByIdUseCase } from './application/use-cases/get-product-by-id.use-case.js';
+import { UpdateProductUseCase } from './application/use-cases/update-product.use-case.js';
+import { DeleteProductUseCase } from './application/use-cases/delete-product.use-case.js';
 
 describe('ProductsController', () => {
   let controller: ProductsController;
 
-  const mockProductsService = {
-    create: vi.fn(),
-    findAll: vi.fn(),
-    findOne: vi.fn(),
-    update: vi.fn(),
-    remove: vi.fn(),
-  };
+  const mockCreateProductUseCase = { execute: vi.fn() };
+  const mockGetProductsUseCase = { execute: vi.fn() };
+  const mockGetProductByIdUseCase = { execute: vi.fn() };
+  const mockUpdateProductUseCase = { execute: vi.fn() };
+  const mockDeleteProductUseCase = { execute: vi.fn() };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductsController],
       providers: [
+        { provide: CreateProductUseCase, useValue: mockCreateProductUseCase },
+        { provide: GetProductsUseCase, useValue: mockGetProductsUseCase },
         {
-          provide: ProductsService,
-          useValue: mockProductsService,
+          provide: GetProductByIdUseCase,
+          useValue: mockGetProductByIdUseCase,
         },
+        { provide: UpdateProductUseCase, useValue: mockUpdateProductUseCase },
+        { provide: DeleteProductUseCase, useValue: mockDeleteProductUseCase },
       ],
     }).compile();
 

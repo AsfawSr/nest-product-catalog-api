@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
+import { DomainExceptionFilter } from './common/filters/domain-exception.filter.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -16,7 +17,8 @@ async function bootstrap() {
     }),
   );
 
+  app.useGlobalFilters(new DomainExceptionFilter());
+
   await app.listen(process.env.PORT ?? 3000);
 }
 await bootstrap();
-
