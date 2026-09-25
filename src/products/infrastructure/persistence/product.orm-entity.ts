@@ -28,6 +28,7 @@ export class ProductOrmEntity {
       from: (value: string) => (value ? parseFloat(value) : 0),
     },
   })
+  @Index()
   price: number;
 
   @Column({ type: 'varchar', length: 100 })
