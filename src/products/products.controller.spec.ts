@@ -5,10 +5,23 @@ import { ProductsService } from './products.service.js';
 describe('ProductsController', () => {
   let controller: ProductsController;
 
+  const mockProductsService = {
+    create: vi.fn(),
+    findAll: vi.fn(),
+    findOne: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProductsController],
-      providers: [ProductsService],
+      providers: [
+        {
+          provide: ProductsService,
+          useValue: mockProductsService,
+        },
+      ],
     }).compile();
 
     controller = module.get<ProductsController>(ProductsController);

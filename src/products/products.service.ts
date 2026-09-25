@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
 import { QueryProductsDto } from './dto/query-products.dto.js';
@@ -6,121 +8,68 @@ import { Product } from './entities/product.entity.js';
 
 @Injectable()
 export class ProductsService {
-  private products: Product[] = [
-    {
-      id: 1,
-      name: 'Mechanical Gaming Keyboard',
-      description: 'RGB mechanical keyboard with tactile blue switches',
-      price: 89.99,
-      category: 'Electronics',
-      stock: 25,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: 2,
-      name: 'Wireless Ergonomic Mouse',
-      description: 'Precision wireless mouse with adjustable DPI',
-      price: 49.5,
-      category: 'Electronics',
-      stock: 40,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: 3,
-      name: 'Ceramic Coffee Mug',
-      description: '12oz minimalist ceramic coffee mug',
-      price: 15.0,
-      category: 'Kitchen',
-      stock: 100,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ];
+  constructor(
+    @InjectRepository(Product)
+    private readonly productRepository: Repository<Product>,
+  ) {}
 
-  private nextId = 4;
-
-  create(createProductDto: CreateProductDto): Product {
-    const newProduct: Product = {
-      id: this.nextId++,
-      ...createProductDto,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.products.push(newProduct);
-    return newProduct;
+  async create(createProductDto: CreateProductDto): Promise<Product> {
+    const product = this.productRepository.create(createProductDto);
+    return await this.productRepository.save(product);
   }
 
-  findAll(query?: QueryProductsDto): Product[] {
-    let result = [...this.products];
+  async findAll(query?: QueryProductsDto): Promise<Product[]> {
+    const qb = this.productRepository.createQueryBuilder('product');
 
-    if (!query) {
-      return result;
+    if (query?.category) {
+      qb.andWhere('LOWER(product.category) = LOWER(:category)', {
+        category: query.category,
+      });
     }
 
-    if (query.category) {
-      result = result.filter(
-        (p) => p.category.toLowerCase() === query.category?.toLowerCase(),
+    if (query?.search) {
+      qb.andWhere(
+        '(LOWER(product.name) LIKE LOWER(:search) OR LOWER(product.description) LIKE LOWER(:search))',
+        { search: `%${query.search}%` },
       );
     }
 
-    if (query.search) {
-      const term = query.search.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(term) ||
-          p.description?.toLowerCase().includes(term),
-      );
+    if (query?.minPrice !== undefined) {
+      qb.andWhere('product.price >= :minPrice', { minPrice: query.minPrice });
     }
 
-    if (query.minPrice !== undefined) {
-      result = result.filter((p) => p.price >= query.minPrice!);
+    if (query?.maxPrice !== undefined) {
+      qb.andWhere('product.price <= :maxPrice', { maxPrice: query.maxPrice });
     }
 
-    if (query.maxPrice !== undefined) {
-      result = result.filter((p) => p.price <= query.maxPrice!);
-    }
+    qb.orderBy('product.createdAt', 'DESC');
 
-    return result;
+    return await qb.getMany();
   }
 
-  findOne(id: number): Product {
-    const product = this.products.find((p) => p.id === id);
+  async findOne(id: number): Promise<Product> {
+    const product = await this.productRepository.findOneBy({ id });
     if (!product) {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
     return product;
   }
 
-  update(id: number, updateProductDto: UpdateProductDto): Product {
-    const index = this.products.findIndex((p) => p.id === id);
-    if (index === -1) {
-      throw new NotFoundException(`Product with ID ${id} not found`);
-    }
-
-    const existingProduct = this.products[index];
-    const updatedProduct: Product = {
-      ...existingProduct,
-      ...updateProductDto,
-      updatedAt: new Date(),
-    };
-
-    this.products[index] = updatedProduct;
-    return updatedProduct;
+  async update(
+    id: number,
+    updateProductDto: UpdateProductDto,
+  ): Promise<Product> {
+    const product = await this.findOne(id);
+    Object.assign(product, updateProductDto);
+    return await this.productRepository.save(product);
   }
 
-  remove(id: number): { message: string; deletedId: number } {
-    const index = this.products.findIndex((p) => p.id === id);
-    if (index === -1) {
-      throw new NotFoundException(`Product with ID ${id} not found`);
-    }
-
-    this.products.splice(index, 1);
+  async remove(id: number): Promise<{ message: string; deletedId: number }> {
+    const product = await this.findOne(id);
+    await this.productRepository.remove(product);
     return {
       message: `Product with ID ${id} was successfully deleted`,
       deletedId: id,
     };
   }
 }
-
