@@ -2,6 +2,9 @@
 let products = [];
 let selectedCategory = '';
 let searchDebounceTimer = null;
+let currentPage = 1;
+const pageSize = 6;
+let paginationMeta = null;
 
 // DOM Elements
 const productsGrid = document.getElementById('products-grid');
@@ -9,6 +12,12 @@ const searchInput = document.getElementById('search-input');
 const minPriceInput = document.getElementById('min-price-input');
 const maxPriceInput = document.getElementById('max-price-input');
 const categoryChipsContainer = document.getElementById('category-chips-container');
+
+// Pagination Elements
+const btnPrevPage = document.getElementById('btn-prev-page');
+const btnNextPage = document.getElementById('btn-next-page');
+const pageCurrentDisplay = document.getElementById('page-current-display');
+const paginationInfo = document.getElementById('pagination-info');
 
 // Stats Elements
 const statTotalProducts = document.getElementById('stat-total-products');
@@ -45,17 +54,41 @@ function setupEventListeners() {
   // Search and Filters
   searchInput.addEventListener('input', () => {
     clearTimeout(searchDebounceTimer);
-    searchDebounceTimer = setTimeout(loadProducts, 300);
+    searchDebounceTimer = setTimeout(() => {
+      currentPage = 1;
+      loadProducts();
+    }, 300);
   });
 
   minPriceInput.addEventListener('input', () => {
     clearTimeout(searchDebounceTimer);
-    searchDebounceTimer = setTimeout(loadProducts, 350);
+    searchDebounceTimer = setTimeout(() => {
+      currentPage = 1;
+      loadProducts();
+    }, 350);
   });
 
   maxPriceInput.addEventListener('input', () => {
     clearTimeout(searchDebounceTimer);
-    searchDebounceTimer = setTimeout(loadProducts, 350);
+    searchDebounceTimer = setTimeout(() => {
+      currentPage = 1;
+      loadProducts();
+    }, 350);
+  });
+
+  // Pagination Controls
+  btnPrevPage.addEventListener('click', () => {
+    if (paginationMeta && paginationMeta.hasPreviousPage) {
+      currentPage--;
+      loadProducts();
+    }
+  });
+
+  btnNextPage.addEventListener('click', () => {
+    if (paginationMeta && paginationMeta.hasNextPage) {
+      currentPage++;
+      loadProducts();
+    }
   });
 
   // Modal Controls
@@ -70,24 +103,30 @@ function setupEventListeners() {
   productForm.addEventListener('submit', handleFormSubmit);
 }
 
-// Fetch products from API
+// Fetch products from API with pagination
 async function loadProducts() {
   try {
     const params = new URLSearchParams();
+    params.append('page', currentPage);
+    params.append('limit', pageSize);
     if (selectedCategory) params.append('category', selectedCategory);
     if (searchInput.value.trim()) params.append('search', searchInput.value.trim());
     if (minPriceInput.value) params.append('minPrice', minPriceInput.value);
     if (maxPriceInput.value) params.append('maxPrice', maxPriceInput.value);
 
-    const url = `/products${params.toString() ? '?' + params.toString() : ''}`;
+    const url = `/products?${params.toString()}`;
     const res = await fetch(url);
 
     if (!res.ok) {
       throw new Error(`Failed to fetch products: ${res.statusText}`);
     }
 
-    products = await res.json();
+    const json = await res.json();
+    products = json.data || [];
+    paginationMeta = json.meta || null;
+
     renderProducts();
+    updatePaginationControls();
     updateStats();
     updateCategoryChips();
   } catch (err) {
@@ -158,9 +197,26 @@ function renderProducts() {
     .join('');
 }
 
+// Update Pagination Bar
+function updatePaginationControls() {
+  if (!paginationMeta) {
+    btnPrevPage.disabled = true;
+    btnNextPage.disabled = true;
+    pageCurrentDisplay.textContent = 'Page 1 / 1';
+    paginationInfo.textContent = 'Showing 0 products';
+    return;
+  }
+
+  const { page, pageCount, itemCount, hasPreviousPage, hasNextPage } = paginationMeta;
+  btnPrevPage.disabled = !hasPreviousPage;
+  btnNextPage.disabled = !hasNextPage;
+  pageCurrentDisplay.textContent = `Page ${page} / ${pageCount || 1}`;
+  paginationInfo.textContent = `Showing ${products.length} of ${itemCount} products`;
+}
+
 // Update Stats Dashboard
 function updateStats() {
-  const total = products.length;
+  const total = paginationMeta ? paginationMeta.itemCount : products.length;
   const totalUnits = products.reduce((acc, p) => acc + Number(p.stock), 0);
   const totalVal = products.reduce((acc, p) => acc + Number(p.price) * Number(p.stock), 0);
   const uniqueCats = new Set(products.map((p) => p.category)).size;
@@ -194,6 +250,7 @@ function updateCategoryChips() {
 
 window.selectCategory = function (cat) {
   selectedCategory = cat;
+  currentPage = 1;
   loadProducts();
 };
 

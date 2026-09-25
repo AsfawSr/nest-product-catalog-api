@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import {
   IProductRepository,
   ProductFilter,
+  PaginatedResult,
 } from '../../domain/repositories/product.repository.interface.js';
 import { Product } from '../../domain/models/product.model.js';
 import { ProductOrmEntity } from './product.orm-entity.js';
@@ -30,7 +31,7 @@ export class ProductTypeOrmRepository implements IProductRepository {
     return ProductMapper.toDomain(ormEntity);
   }
 
-  async findAll(filter?: ProductFilter): Promise<Product[]> {
+  async findAll(filter?: ProductFilter): Promise<PaginatedResult<Product>> {
     const qb = this.ormRepository.createQueryBuilder('product');
 
     if (filter?.category) {
@@ -54,10 +55,28 @@ export class ProductTypeOrmRepository implements IProductRepository {
       qb.andWhere('product.price <= :maxPrice', { maxPrice: filter.maxPrice });
     }
 
-    qb.orderBy('product.createdAt', 'DESC');
+    // Dynamic sorting with column whitelist protection
+    const validSortColumns = ['id', 'name', 'price', 'stock', 'createdAt', 'category'];
+    const sortColumn = validSortColumns.includes(filter?.sortBy ?? '')
+      ? filter!.sortBy!
+      : 'createdAt';
+    const orderDirection = filter?.order === 'ASC' ? 'ASC' : 'DESC';
 
-    const ormEntities = await qb.getMany();
-    return ormEntities.map((entity) => ProductMapper.toDomain(entity));
+    qb.orderBy(`product.${sortColumn}`, orderDirection);
+
+    // Pagination skip & take
+    if (filter?.skip !== undefined) {
+      qb.skip(filter.skip);
+    }
+    if (filter?.limit !== undefined) {
+      qb.take(filter.limit);
+    }
+
+    const [ormEntities, total] = await qb.getManyAndCount();
+    return {
+      items: ormEntities.map((entity) => ProductMapper.toDomain(entity)),
+      total,
+    };
   }
 
   async delete(id: number): Promise<boolean> {

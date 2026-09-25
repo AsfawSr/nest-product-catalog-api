@@ -21,6 +21,7 @@ import { CreateProductDto } from './dto/create-product.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
 import { QueryProductsDto } from './dto/query-products.dto.js';
 import { ProductOutputDto } from './application/dtos/product-output.dto.js';
+import { PageDto } from '../common/pagination/page.dto.js';
 import { CreateProductUseCase } from './application/use-cases/create-product.use-case.js';
 import { GetProductsUseCase } from './application/use-cases/get-products.use-case.js';
 import { GetProductByIdUseCase } from './application/use-cases/get-product-by-id.use-case.js';
@@ -55,11 +56,11 @@ export class ProductsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Retrieve and filter all products' })
+  @ApiOperation({ summary: 'Retrieve, filter, and paginate products' })
   @ApiResponse({
     status: 200,
-    description: 'List of products matching query criteria.',
-    type: [ProductOutputDto],
+    description: 'Paginated list of products matching criteria.',
+    type: PageDto<ProductOutputDto>,
   })
   findAll(@Query() query: QueryProductsDto) {
     return this.getProductsUseCase.execute(query);

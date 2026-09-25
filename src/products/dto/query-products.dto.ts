@@ -1,8 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsPositive, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PageOptionsDto } from '../../common/pagination/page-options.dto.js';
 
-export class QueryProductsDto {
+export class QueryProductsDto extends PageOptionsDto {
   @ApiPropertyOptional({
     example: 'Audio',
     description: 'Filter products by category',
