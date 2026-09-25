@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { IProductRepository } from '../../domain/repositories/product.repository.interface.js';
 import { PRODUCT_REPOSITORY_TOKEN } from '../../domain/repositories/product.repository.interface.js';
 import { ProductOutputDto } from '../dtos/product-output.dto.js';
+import { DomainEventDispatcher } from '../../../common/events/domain-event-dispatcher.service.js';
 
 export interface UpdateProductCommand {
   name?: string;
@@ -16,6 +17,7 @@ export class UpdateProductUseCase {
   constructor(
     @Inject(PRODUCT_REPOSITORY_TOKEN)
     private readonly productRepository: IProductRepository,
+    private readonly eventDispatcher: DomainEventDispatcher,
   ) {}
 
   async execute(
@@ -44,6 +46,10 @@ export class UpdateProductUseCase {
     product.updateDetails(command.name, command.description, command.category);
 
     const saved = await this.productRepository.save(product);
+
+    // Dispatch all domain events accumulated on the aggregate
+    this.eventDispatcher.dispatch(product.pullDomainEvents());
+
     return ProductOutputDto.fromDomain(saved);
   }
 }

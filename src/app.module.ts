@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { ProductsModule } from './products/products.module.js';
@@ -9,6 +10,10 @@ import { ProductsModule } from './products/products.module.js';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    EventEmitterModule.forRoot({
+      maxListeners: 20,
+      verboseMemoryLeak: true,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -21,7 +26,7 @@ import { ProductsModule } from './products/products.module.js';
         password: configService.get<string>('DB_PASSWORD', 'Asfawpassword'),
         database: configService.get<string>('DB_NAME', 'nest_products'),
         autoLoadEntities: true,
-        synchronize: true, // Automatically synchronizes entity schema with PostgreSQL database (like hibernate.ddl-auto=update)
+        synchronize: true,
       }),
     }),
     ProductsModule,

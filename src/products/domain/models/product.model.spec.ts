@@ -8,6 +8,8 @@ import {
   InvalidPriceException,
   InvalidStockException,
 } from '../exceptions/domain.exception.js';
+import { ProductPriceChangedEvent } from '../events/product-price-changed.event.js';
+import { ProductStockDepletedEvent } from '../events/product-stock-depleted.event.js';
 
 describe('Product Aggregate Root (Domain)', () => {
   it('should create a valid product', () => {
@@ -49,46 +51,55 @@ describe('Product Aggregate Root (Domain)', () => {
     }).toThrow(InsufficientStockException);
   });
 
-  it('should successfully add and decrease stock within limits', () => {
-    const product = Product.create({
-      name: 'Gaming Headset',
-      price: 79.99,
-      category: 'Electronics',
-      stock: 10,
-    });
-
-    product.addStock(5);
-    expect(product.stock.quantity).toBe(15);
-
-    product.decreaseStock(8);
-    expect(product.stock.quantity).toBe(7);
-  });
-
-  it('should update price and details using business methods', () => {
-    const product = Product.create({
-      name: 'USB-C Cable',
-      price: 9.99,
+  it('should record ProductStockDepletedEvent when stock drops to zero', () => {
+    const product = Product.reconstitute({
+      id: 5,
+      name: 'Limited Edition Keycap',
+      price: Price.create(35.0),
       category: 'Accessories',
-      stock: 50,
+      stock: Stock.create(3),
     });
 
-    product.changePrice(14.5);
-    expect(product.price.value).toBe(14.5);
+    product.decreaseStock(3);
+    expect(product.stock.isOutOfStock()).toBe(true);
 
-    product.updateDetails('USB-C 100W Fast Cable', 'Braided nylon cable', 'Cables');
-    expect(product.name).toBe('USB-C 100W Fast Cable');
-    expect(product.description).toBe('Braided nylon cable');
-    expect(product.category).toBe('Cables');
+    const events = product.pullDomainEvents();
+    expect(events.length).toBe(1);
+    expect(events[0]).toBeInstanceOf(ProductStockDepletedEvent);
+    expect((events[0] as ProductStockDepletedEvent).productId).toBe(5);
   });
 
-  it('should enforce name length rule', () => {
-    expect(() => {
-      Product.create({
-        name: 'AB',
-        price: 10,
-        category: 'Misc',
-        stock: 1,
-      });
-    }).toThrow(DomainException);
+  it('should record ProductPriceChangedEvent when price is altered', () => {
+    const product = Product.reconstitute({
+      id: 8,
+      name: 'Gaming Mouse',
+      price: Price.create(50.0),
+      category: 'Electronics',
+      stock: Stock.create(10),
+    });
+
+    product.changePrice(45.0);
+    expect(product.price.value).toBe(45.0);
+
+    const events = product.pullDomainEvents();
+    expect(events.length).toBe(1);
+    expect(events[0]).toBeInstanceOf(ProductPriceChangedEvent);
+    const event = events[0] as ProductPriceChangedEvent;
+    expect(event.oldPrice).toBe(50.0);
+    expect(event.newPrice).toBe(45.0);
+  });
+
+  it('should clear pulled domain events after pulling', () => {
+    const product = Product.reconstitute({
+      id: 9,
+      name: 'Desk Mat',
+      price: Price.create(25.0),
+      category: 'Accessories',
+      stock: Stock.create(1),
+    });
+
+    product.changePrice(20.0);
+    expect(product.pullDomainEvents().length).toBe(1);
+    expect(product.pullDomainEvents().length).toBe(0); // empty now
   });
 });

@@ -1,6 +1,9 @@
 import { Price } from '../value-objects/price.vo.js';
 import { Stock } from '../value-objects/stock.vo.js';
 import { DomainException } from '../exceptions/domain.exception.js';
+import { IDomainEvent } from '../events/domain-event.interface.js';
+import { ProductPriceChangedEvent } from '../events/product-price-changed.event.js';
+import { ProductStockDepletedEvent } from '../events/product-stock-depleted.event.js';
 
 export interface ProductProperties {
   id?: number;
@@ -22,6 +25,7 @@ export class Product {
   private _stock: Stock;
   private _createdAt: Date;
   private _updatedAt: Date;
+  private _domainEvents: IDomainEvent[] = [];
 
   private constructor(props: ProductProperties) {
     this._id = props.id;
@@ -72,10 +76,28 @@ export class Product {
     return new Product(props);
   }
 
-  // Business methods enforcing invariants
+  // Domain Event Management
+  public addDomainEvent(event: IDomainEvent): void {
+    this._domainEvents.push(event);
+  }
+
+  public pullDomainEvents(): IDomainEvent[] {
+    const events = [...this._domainEvents];
+    this._domainEvents = [];
+    return events;
+  }
+
+  // Business methods enforcing invariants & recording events
   public changePrice(newPrice: number): void {
+    const oldPrice = this._price.value;
     this._price = Price.create(newPrice);
     this._updatedAt = new Date();
+
+    if (this._id && oldPrice !== this._price.value) {
+      this.addDomainEvent(
+        new ProductPriceChangedEvent(this._id, oldPrice, this._price.value),
+      );
+    }
   }
 
   public addStock(amount: number): void {
@@ -86,6 +108,12 @@ export class Product {
   public decreaseStock(amount: number): void {
     this._stock = this._stock.decrease(amount);
     this._updatedAt = new Date();
+
+    if (this._stock.isOutOfStock()) {
+      this.addDomainEvent(
+        new ProductStockDepletedEvent(this._id ?? 0, this._name),
+      );
+    }
   }
 
   public updateDetails(name?: string, description?: string, category?: string): void {

@@ -9,6 +9,8 @@ import { GetProductByIdUseCase } from './application/use-cases/get-product-by-id
 import { UpdateProductUseCase } from './application/use-cases/update-product.use-case.js';
 import { DeleteProductUseCase } from './application/use-cases/delete-product.use-case.js';
 import { ProductsController } from './products.controller.js';
+import { DomainEventDispatcher } from '../common/events/domain-event-dispatcher.service.js';
+import { ProductEventsListener } from './application/listeners/product-events.listener.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([ProductOrmEntity])],
@@ -18,6 +20,8 @@ import { ProductsController } from './products.controller.js';
       provide: PRODUCT_REPOSITORY_TOKEN,
       useClass: ProductTypeOrmRepository,
     },
+    DomainEventDispatcher,
+    ProductEventsListener,
     CreateProductUseCase,
     GetProductsUseCase,
     GetProductByIdUseCase,
@@ -26,6 +30,7 @@ import { ProductsController } from './products.controller.js';
   ],
   exports: [
     PRODUCT_REPOSITORY_TOKEN,
+    DomainEventDispatcher,
     CreateProductUseCase,
     GetProductsUseCase,
     GetProductByIdUseCase,
