@@ -22,7 +22,7 @@ export class GetProductsUseCase {
       minPrice: pageOptions.minPrice,
       maxPrice: pageOptions.maxPrice,
       skip: pageOptions.skip,
-      limit: pageOptions.limit,
+      limit: pageOptions.pageSize,
       order: pageOptions.order,
       sortBy: pageOptions.sortBy,
     });

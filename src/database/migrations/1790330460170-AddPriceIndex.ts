@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import type { MigrationInterface, QueryRunner } from "typeorm";
 
 export class AddPriceIndex1790330460170 implements MigrationInterface {
     name = 'AddPriceIndex1790330460170'

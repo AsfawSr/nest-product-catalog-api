@@ -34,6 +34,18 @@ export class PageOptionsDto {
   readonly limit: number = 10;
 
   @ApiPropertyOptional({
+    minimum: 1,
+    maximum: 50,
+    description: 'Alternative alias for limit',
+  })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  @IsOptional()
+  readonly take?: number;
+
+  @ApiPropertyOptional({
     default: 'createdAt',
     description: 'Field name to sort by',
   })
@@ -41,7 +53,11 @@ export class PageOptionsDto {
   @IsOptional()
   readonly sortBy: string = 'createdAt';
 
+  get pageSize(): number {
+    return this.take ?? this.limit;
+  }
+
   get skip(): number {
-    return (this.page - 1) * this.limit;
+    return (this.page - 1) * this.pageSize;
   }
 }
